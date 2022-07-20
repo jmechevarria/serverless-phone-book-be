@@ -612,6 +612,35 @@ Resources:
           - Effect: Allow
             Action: 'rds-data:ExecuteStatement'
             Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
+  
+  DBSetup:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 5
+      FunctionName: DBSetup
+      CodeUri: src/db-setup
+      AutoPublishAlias: DBSetupAlias
+      Environment:
+        Variables:
+          DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
+          DB_NAME: !Ref DatabaseName
+          DB_CREDENTIALS_ARN: !Ref DBCredentialsSecret
+          DB_ENDPOINT_ADDRESS: !GetAtt RDSCluster.Endpoint.Address
+          DB_ENDPOINT_PORT: !GetAtt RDSCluster.Endpoint.Port
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DBCredentialsSecret
+        - Statement:
+          - Effect: Allow
+            Action: 'rds-data:ExecuteStatement'
+            Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
+        - Statement:
+          - Effect: Allow
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
 
   RDSCluster:
     Type: AWS::RDS::DBCluster
