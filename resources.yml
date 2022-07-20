@@ -16,6 +16,18 @@ Parameters:
       - staging-green
   AllowedCorsOrigins:
     Type: String
+  DBClusterName:
+    Description: Aurora Postgres RDS cluster name
+    Type: String
+    Default: rds-cluster
+  DatabaseName:
+    Description: Aurora Postgres RDS database name
+    Type: String
+    Default: phone_book_db
+  DBAdminUserName:
+    Description: The admin user name.
+    Type: String
+    Default: admin_user
 
 Globals:
   Function:
@@ -584,6 +596,54 @@ Resources:
       FunctionName: Login
       CodeUri: src/login
       AutoPublishAlias: LoginLambdaAlias
+      Environment:
+        Variables:
+          DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
+          DB_NAME: !Ref DatabaseName
+          DB_CREDENTIALS_ARN: !Ref DBCredentialsSecret
+          DB_ENDPOINT_ADDRESS: !GetAtt RDSCluster.Endpoint.Address
+          DB_ENDPOINT_PORT: !GetAtt RDSCluster.Endpoint.Port
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DBCredentialsSecret
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:JWT_SECRET-DGg8Ol'
+        - Statement:
+          - Effect: Allow
+            Action: 'rds-data:ExecuteStatement'
+            Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
+
+  RDSCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      DBClusterIdentifier: !Ref DBClusterName
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DBCredentialsSecret}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DBCredentialsSecret}:SecretString:password}}'
+      DatabaseName: !Ref DatabaseName
+      Engine: aurora-postgresql
+      EngineMode: serverless
+      EngineVersion: '10.18'
+      # EnableHttpEndpoint: true # for HTTP API endpoint
+      ScalingConfiguration:
+        AutoPause: true
+        MaxCapacity: 2
+        MinCapacity: 2
+        SecondsUntilAutoPause: 900 # 15 min
+
+  DBCredentialsSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub '${DBClusterName}-credentials'
+      Description: RDS database user credentials
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"username": "${DBAdminUserName}"}'
+        GenerateStringKey: password
+        PasswordLength: 30
+        ExcludeCharacters: '"@/\'
+      Tags:
+        - Key: app
+          Value: phone-book-be
+
 
 #  ██████╗ ██╗   ██╗███╗   ██╗ █████╗ ███╗   ███╗ ██████╗ ██████╗ ██████╗
 #  ██╔══██╗╚██╗ ██╔╝████╗  ██║██╔══██╗████╗ ████║██╔═══██╗██╔══██╗██╔══██╗

@@ -17,6 +17,7 @@
     "sinon": "^14.0.0"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.131.0",
     "jsonwebtoken": "^8.5.1"
   }
 }

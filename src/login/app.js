@@ -1,5 +1,9 @@
+const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
+
+const secretManagerClient = new SecretsManagerClient({
+  region: process.env.AWS_REGION,
+});
 
 exports.lambdaHandler = async (event) => {
   try {
@@ -7,7 +11,10 @@ exports.lambdaHandler = async (event) => {
     const userId = 1;
 
     // generate Bearer token
-    const jwtSecret = crypto.randomBytes(256).toString('base64');
+    const jwtSecret = (await secretManagerClient.send(
+      new GetSecretValueCommand({ SecretId: 'JWT_SECRET' }),
+    )).SecretString;
+
     const token = jwt.sign({
       expiresIn: 600,
       email: event.email,
