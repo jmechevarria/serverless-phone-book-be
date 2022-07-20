@@ -114,7 +114,7 @@ Resources:
       ResourceId: !Ref LoginResource
       OperationName: Login
       HttpMethod: POST
-      AuthorizationType: CUSTOM
+      AuthorizationType: NONE
       # AuthorizerId: !Ref PhoneBookBEApiAuthorizer
       RequestParameters:
         method.request.header.Authorization: true
@@ -506,6 +506,33 @@ Resources:
                   - logs:FilterLogEvents
                   - lambda:InvokeFunction
                 Resource: "*"
+      Tags:
+        - Key: app
+          Value: phone-book-be
+
+  LambdaAuthorizerInvocationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowGatewayAuthorizerToInvokeLambda
+            Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+      Policies:
+        - PolicyName: CallLambdaAuthorizerPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !Ref LambdaAuthorizer.Alias
       Tags:
         - Key: app
           Value: phone-book-be
