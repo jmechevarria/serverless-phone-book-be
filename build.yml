@@ -43,7 +43,7 @@ phases:
 
       - sam deploy --stack-name $stack_name --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM --s3-bucket $S3_BUCKET_NAME --parameter-overrides Environment=$ENVIRONMENT AllowedCorsOrigins=$ALLOWED_CORS_ORIGINS
 
-      # - awsRegion=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='region'].OutputValue" --output text)
-      # - restApiId=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='apiGatewayId'].OutputValue" --output text)
-      # - apiStageName=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='apiStageName'].OutputValue" --output text)
-      # - aws apigateway create-deployment --rest-api-id $restApiId --region $awsRegion --stage-name $apiStageName
+      - awsRegion=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='region'].OutputValue" --output text)
+      - restApiId=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='apiGatewayId'].OutputValue" --output text)
+      - apiStageName=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='apiStageName'].OutputValue" --output text)
+      - aws apigateway create-deployment --rest-api-id $restApiId --region $awsRegion --stage-name $apiStageName
