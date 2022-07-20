@@ -1,0 +1,17 @@
+{
+  "name": "src",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "lint": "eslint . --config ../../.eslintrc.json",
+    "lint:fix": "eslint . --fix --config ../../.eslintrc.json",
+    "test": "mocha tests/unit/"
+  },
+  "author": "JMED <jmechevarria2015@gmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^8.20.0",
+    "mocha": "^10.0.0"
+  }
+}

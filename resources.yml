@@ -1,0 +1,624 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Phone Book app backend
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - sandbox
+      - dev
+      - qa
+      - performance
+      - security
+      - staging
+      - production
+      - staging-green
+  AllowedCorsOrigins:
+    Type: String
+
+Globals:
+  Function:
+    Handler: app.lambdaHandler
+    Runtime: nodejs14.x
+    Timeout: 3
+    Tracing: Active
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    Tags:
+      app: phone-book-be
+
+Resources:
+
+#   █████╗ ██████╗ ██╗     ██████╗  █████╗ ████████╗███████╗██╗    ██╗ █████╗ ██╗   ██╗
+#  ██╔══██╗██╔══██╗██║    ██╔════╝ ██╔══██╗╚══██╔══╝██╔════╝██║    ██║██╔══██╗╚██╗ ██╔╝
+#  ███████║██████╔╝██║    ██║  ███╗███████║   ██║   █████╗  ██║ █╗ ██║███████║ ╚████╔╝
+#  ██╔══██║██╔═══╝ ██║    ██║   ██║██╔══██║   ██║   ██╔══╝  ██║███╗██║██╔══██║  ╚██╔╝
+#  ██║  ██║██║     ██║    ╚██████╔╝██║  ██║   ██║   ███████╗╚███╔███╔╝██║  ██║   ██║
+#  ╚═╝  ╚═╝╚═╝     ╚═╝     ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝   ╚═╝
+#
+
+  # ProfileApiGateway:
+  #   Type: AWS::ApiGateway::RestApi
+  #   Properties:
+  #     Name: profile-api
+  #     Description: API gateway for Profile API project
+  #     EndpointConfiguration:
+  #       Types:
+  #         - REGIONAL
+  #     Tags:
+  #       - Key: app
+  #         Value: profile-api
+
+  # ApiGatewayAccount:
+  #   Type: AWS::ApiGateway::Account
+  #   Properties:
+  #     CloudWatchRoleArn: !GetAtt ProfileApiGatewayRole.Arn
+
+  # ProfileApiAuthorizer:
+  #   Type: AWS::ApiGateway::Authorizer
+  #   Properties:
+  #     AuthorizerCredentials: !GetAtt LambdaAuthorizerInvocationRole.Arn
+  #     AuthorizerResultTtlInSeconds: 300
+  #     AuthorizerUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaAuthorizer.Arn}:lambdaAuthorizerAlias/invocations'
+  #     Type: TOKEN
+  #     Name: ProfileApiAuthorizer
+  #     IdentitySource: method.request.header.Authorization
+  #     RestApiId: !Ref ProfileApiGateway
+
+  # AuthenticatedUserProfileApiAuthorizer:
+  #   Type: AWS::ApiGateway::Authorizer
+  #   Properties:
+  #     AuthorizerCredentials: !GetAtt LambdaAuthorizerInvocationRole.Arn
+  #     AuthorizerResultTtlInSeconds: 300
+  #     AuthorizerUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaAuthorizer.Arn}:lambdaAuthorizerAlias/invocations'
+  #     Type: TOKEN
+  #     Name: AuthenticatedUserProfileApiAuthorizer
+  #     IdentitySource: method.request.header.Authorization
+  #     IdentityValidationExpression: ^Bearer .+$
+  #     RestApiId: !Ref ProfileApiGateway
+
+  # ProfileApiGatewayDeployment:
+  #   Type: AWS::ApiGateway::Deployment
+  #   DependsOn:
+  #     - SubscriptionStatusGetMethod
+  #     - SubscriptionUpdatePutMethod
+  #   Properties:
+  #     Description: !Sub "Profile API ${Environment} API Gateway Deployment"
+  #     RestApiId: !Ref ProfileApiGateway
+  #     StageName: !Sub ${Environment}-profile
+  #     StageDescription:
+  #       AccessLogSetting:
+  #         DestinationArn: !GetAtt ProfileApiGatewayLogGroup.Arn
+  #         Format: '{"requestId":"$context.requestId","apiId":"$context.apiId","ip":"$context.identity.sourceIp","caller":"$context.identity.caller","user":"$context.identity.user","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath","resourceId":"$context.resourceId","status":"$context.status","protocol":"$context.protocol","responseLength":"$context.responseLength","userAgent":"$context.identity.userAgent","accountId":"$context.identity.accountId","apiKey":"$context.identity.apiKey","contextErrorMessageString":"$context.error.messageString"}'
+  #       Description: !Sub "Stage ${Environment}-profile"
+  #       CachingEnabled: false
+  #       LoggingLevel: INFO
+  #       MetricsEnabled: true
+  #       TracingEnabled: true
+  #       DataTraceEnabled: true
+  #       Tags:
+  #         - Key: app
+  #           Value: profile-api
+
+  # RequestParametersValidator:
+  #   Type: AWS::ApiGateway::RequestValidator
+  #   Properties:
+  #     Name: RequestParametersValidator
+  #     RestApiId: !Ref ProfileApiGateway
+  #     ValidateRequestBody: false
+  #     ValidateRequestParameters: true
+
+  # RequestBodyValidator:
+  #   Type: AWS::ApiGateway::RequestValidator
+  #   Properties:
+  #     Name: RequestBodyValidator
+  #     RestApiId: !Ref ProfileApiGateway
+  #     ValidateRequestBody: true
+  #     ValidateRequestParameters: false
+
+  # SubscriptionStatusResource:
+  #   Type: AWS::ApiGateway::Resource
+  #   Properties:
+  #     ParentId: !GetAtt ProfileApiGateway.RootResourceId
+  #     PathPart: subscription
+  #     RestApiId: !Ref ProfileApiGateway
+
+  # SubscriptionStatusGetMethod:
+  #   Type: AWS::ApiGateway::Method
+  #   Properties:
+  #     RestApiId: !Ref ProfileApiGateway
+  #     ResourceId: !Ref SubscriptionStatusResource
+  #     OperationName: GetSubscriptionStatus
+  #     HttpMethod: GET
+  #     AuthorizationType: CUSTOM
+  #     AuthorizerId: !Ref AuthenticatedUserProfileApiAuthorizer
+  #     RequestParameters:
+  #       method.request.header.Authorization: true
+  #       method.request.querystring.mpid: true
+  #     RequestValidatorId: !Ref RequestParametersValidator
+  #     Integration:
+  #       Type: AWS
+  #       Credentials: !GetAtt SubscriptionStatusInvocationRole.Arn
+  #       IntegrationHttpMethod: POST
+  #       Uri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${subscriptionStatus.Arn}:subscriptionStatusAlias/invocations"
+  #       RequestTemplates:
+  #         application/json: |
+  #           {
+  #             "mPid":"$input.params('mpid')"
+  #           }
+  #       PassthroughBehavior: WHEN_NO_TEMPLATES
+  #       IntegrationResponses:
+  #         - StatusCode: '200'
+  #           ResponseTemplates:
+  #             application/json: |
+  #               {
+  #                 "result": $input.json('$')
+  #               }
+  #           ResponseParameters:
+  #             method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+  #             method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+  #             method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #         - StatusCode: '403'
+  #           SelectionPattern: '403.*'
+  #           ResponseTemplates:
+  #             application/json: |
+  #               {
+  #                 "result" : { "message": "User is not authorized to access this resource with an explicit deny" }
+  #               }
+  #           ResponseParameters:
+  #             method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+  #             method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+  #             method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #         - StatusCode: '404'
+  #           SelectionPattern: '404.*'
+  #           ResponseTemplates:
+  #             application/json: |
+  #               {
+  #                 "result" : { "message": "Not found" }
+  #               }
+  #           ResponseParameters:
+  #             method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+  #             method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+  #             method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #         - StatusCode: '500'
+  #           SelectionPattern: '500.*'
+  #           ResponseTemplates:
+  #             application/json: |
+  #               {
+  #                 "result" : { "message": "Internal Server Error" }
+  #               }
+  #           ResponseParameters:
+  #             method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+  #             method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+  #             method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     MethodResponses:
+  #       - StatusCode: '200'
+  #         ResponseParameters:
+  #           method.response.header.Access-Control-Allow-Headers:
+  #             type: string
+  #           method.response.header.Access-Control-Allow-Methods:
+  #             type: string
+  #           method.response.header.Access-Control-Allow-Origin:
+  #             type: string
+  #       - StatusCode: '403'
+  #         ResponseParameters:
+  #           method.response.header.Access-Control-Allow-Headers:
+  #             type: string
+  #           method.response.header.Access-Control-Allow-Methods:
+  #             type: string
+  #           method.response.header.Access-Control-Allow-Origin:
+  #             type: string
+  #       - StatusCode: '404'
+  #         ResponseParameters:
+  #           method.response.header.Access-Control-Allow-Headers:
+  #             type: string
+  #           method.response.header.Access-Control-Allow-Methods:
+  #             type: string
+  #           method.response.header.Access-Control-Allow-Origin:
+  #             type: string
+  #       - StatusCode: '500'
+  #         ResponseParameters:
+  #           method.response.header.Access-Control-Allow-Headers:
+  #             type: string
+  #           method.response.header.Access-Control-Allow-Methods:
+  #             type: string
+  #           method.response.header.Access-Control-Allow-Origin:
+  #             type: string
+
+#  ███╗   ███╗ ██████╗ ██████╗ ███████╗██╗     ███████╗
+#  ████╗ ████║██╔═══██╗██╔══██╗██╔════╝██║     ██╔════╝
+#  ██╔████╔██║██║   ██║██║  ██║█████╗  ██║     ███████╗
+#  ██║╚██╔╝██║██║   ██║██║  ██║██╔══╝  ██║     ╚════██║
+#  ██║ ╚═╝ ██║╚██████╔╝██████╔╝███████╗███████╗███████║
+#  ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝
+#
+
+
+#   ██████╗  █████╗ ████████╗███████╗██╗    ██╗ █████╗ ██╗   ██╗    ██████╗ ███████╗███████╗██████╗  ██████╗ ███╗   ██╗███████╗███████╗███████╗
+#  ██╔════╝ ██╔══██╗╚══██╔══╝██╔════╝██║    ██║██╔══██╗╚██╗ ██╔╝    ██╔══██╗██╔════╝██╔════╝██╔══██╗██╔═══██╗████╗  ██║██╔════╝██╔════╝██╔════╝
+#  ██║  ███╗███████║   ██║   █████╗  ██║ █╗ ██║███████║ ╚████╔╝     ██████╔╝█████╗  ███████╗██████╔╝██║   ██║██╔██╗ ██║███████╗█████╗  ███████╗
+#  ██║   ██║██╔══██║   ██║   ██╔══╝  ██║███╗██║██╔══██║  ╚██╔╝      ██╔══██╗██╔══╝  ╚════██║██╔═══╝ ██║   ██║██║╚██╗██║╚════██║██╔══╝  ╚════██║
+#  ╚██████╔╝██║  ██║   ██║   ███████╗╚███╔███╔╝██║  ██║   ██║       ██║  ██║███████╗███████║██║     ╚██████╔╝██║ ╚████║███████║███████╗███████║
+#   ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝   ╚═╝       ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝      ╚═════╝ ╚═╝  ╚═══╝╚══════╝╚══════╝╚══════╝
+#
+
+  # GatewayResponseAccessDenied:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: ACCESS_DENIED
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseApiConfigurationError:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: API_CONFIGURATION_ERROR
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseAuthorizerFailure:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: AUTHORIZER_FAILURE
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseAuthorizerConfigurationError:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: AUTHORIZER_CONFIGURATION_ERROR
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseBadRequestParameters:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: BAD_REQUEST_PARAMETERS
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseBadRequestBody:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: BAD_REQUEST_BODY
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseDefault4xx:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: DEFAULT_4XX
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseDefault5xx:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: DEFAULT_5XX
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseExpiredToken:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: EXPIRED_TOKEN
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseInvalidSignature:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: INVALID_SIGNATURE
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseIntegrationFailure:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: INTEGRATION_FAILURE
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseIntegrationTimeout:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: INTEGRATION_TIMEOUT
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseInvalidApiKey:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: INVALID_API_KEY
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseMissingAuthenticationToken:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: MISSING_AUTHENTICATION_TOKEN
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseQuotaExceeded:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: QUOTA_EXCEEDED
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseRequestTooLarge:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: REQUEST_TOO_LARGE
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseResourceNotFound:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: RESOURCE_NOT_FOUND
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseThrottled:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: THROTTLED
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseUnauthorized:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: UNAUTHORIZED
+  #     RestApiId: !Ref ProfileApiGateway
+  # GatewayResponseUnsupportedMediaType:
+  #   Type: AWS::ApiGateway::GatewayResponse
+  #   Properties:
+  #     ResponseParameters:
+  #       gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel,Access-Token'"
+  #       gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+  #       gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+  #     ResponseTemplates:
+  #       application/json: |
+  #         {
+  #           "result": { "message":$context.error.messageString }
+  #         }
+  #     ResponseType: UNSUPPORTED_MEDIA_TYPE
+  #     RestApiId: !Ref ProfileApiGateway
+
+#  ██████╗  ██████╗ ██╗     ███████╗███████╗
+#  ██╔══██╗██╔═══██╗██║     ██╔════╝██╔════╝
+#  ██████╔╝██║   ██║██║     █████╗  ███████╗
+#  ██╔══██╗██║   ██║██║     ██╔══╝  ╚════██║
+#  ██║  ██║╚██████╔╝███████╗███████╗███████║
+#  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝
+#
+
+
+#  ██╗      █████╗ ███╗   ███╗██████╗ ██████╗  █████╗
+#  ██║     ██╔══██╗████╗ ████║██╔══██╗██╔══██╗██╔══██╗
+#  ██║     ███████║██╔████╔██║██████╔╝██║  ██║███████║
+#  ██║     ██╔══██║██║╚██╔╝██║██╔══██╗██║  ██║██╔══██║
+#  ███████╗██║  ██║██║ ╚═╝ ██║██████╔╝██████╔╝██║  ██║
+#  ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═════╝ ╚═════╝ ╚═╝  ╚═╝
+#
+
+  LambdaAuthorizer:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 10
+      FunctionName: ProfileLambdaAuthorizer
+      CodeUri: src/lambda-authorizer
+      AutoPublishAlias: lambdaAuthorizerAlias
+
+#  ██████╗ ██╗   ██╗███╗   ██╗ █████╗ ███╗   ███╗ ██████╗ ██████╗ ██████╗
+#  ██╔══██╗╚██╗ ██╔╝████╗  ██║██╔══██╗████╗ ████║██╔═══██╗██╔══██╗██╔══██╗
+#  ██║  ██║ ╚████╔╝ ██╔██╗ ██║███████║██╔████╔██║██║   ██║██║  ██║██████╔╝
+#  ██║  ██║  ╚██╔╝  ██║╚██╗██║██╔══██║██║╚██╔╝██║██║   ██║██║  ██║██╔══██╗
+#  ██████╔╝   ██║   ██║ ╚████║██║  ██║██║ ╚═╝ ██║╚██████╔╝██████╔╝██████╔╝
+#  ╚═════╝    ╚═╝   ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═════╝
+#
+
+  # SubscriptionCacheTable:
+  #   Type: AWS::DynamoDB::Table
+  #   DeletionPolicy: Retain
+  #   Properties:
+  #     AttributeDefinitions:
+  #       - AttributeName: mpid
+  #         AttributeType: S
+  #       - AttributeName: email
+  #         AttributeType: S
+  #       - AttributeName: phone
+  #         AttributeType: S
+  #     KeySchema:
+  #       - AttributeName: mpid
+  #         KeyType: HASH
+  #     ProvisionedThroughput:
+  #       ReadCapacityUnits: 5
+  #       WriteCapacityUnits: 5
+  #     TimeToLiveSpecification:
+  #       AttributeName: ttl
+  #       Enabled: true
+  #     GlobalSecondaryIndexes:
+  #       - IndexName:
+  #           !Ref emailIndexName
+  #         KeySchema:
+  #           - AttributeName: email
+  #             KeyType: HASH
+  #         Projection:
+  #           NonKeyAttributes:
+  #             - phone
+  #             - email_subscribe
+  #             - push_subscribe
+  #             - last_updated
+  #             - ttl
+  #           ProjectionType: INCLUDE
+  #         ProvisionedThroughput:
+  #           ReadCapacityUnits: 5
+  #           WriteCapacityUnits: 5
+  #       - IndexName:
+  #           !Ref phoneIndexName
+  #         KeySchema:
+  #           - AttributeName: phone
+  #             KeyType: HASH
+  #         Projection:
+  #           NonKeyAttributes:
+  #             - email
+  #             - email_subscribe
+  #             - push_subscribe
+  #             - last_updated
+  #             - ttl
+  #           ProjectionType: INCLUDE
+  #         ProvisionedThroughput:
+  #           ReadCapacityUnits: 5
+  #           WriteCapacityUnits: 5
+
+Outputs:
+  apiStageName:
+    Value: !Sub ${Environment}-phone-book-be
+
+  # apiGatewayId:
+  #   Value: !Sub ${ProfileApiGateway}
+
+  region:
+    Value: !Sub ${AWS::Region}

@@ -1,0 +1,49 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - pip install --upgrade aws-sam-cli
+  pre_build:
+    commands:
+      - npm install -g removeNPMAbsolutePaths
+      - echo Installing top-level dependencies
+      - npm install
+      - removeNPMAbsolutePaths .
+      - npm prune --production
+  build:
+    commands:
+      - stack_name=phone-book-be
+      - aws_credentials=$(aws sts assume-role --role-arn $ASSUME_ROLE_ARN --role-session-name "RoleSession1")
+      - export AWS_ACCESS_KEY_ID=$(echo $aws_credentials|jq '.Credentials.AccessKeyId'|tr -d '"')
+      - export AWS_SECRET_ACCESS_KEY=$(echo $aws_credentials|jq '.Credentials.SecretAccessKey'|tr -d '"')
+      - export AWS_SESSION_TOKEN=$(echo $aws_credentials|jq '.Credentials.SessionToken'|tr -d '"')
+      - export AWS_RETRY_MODE=$(aws ssm get-parameter --name 'CliAwsRetryMode' --query 'Parameter.Value' --output text)
+      - export AWS_MAX_ATTEMPTS=$(aws ssm get-parameter --name 'CliAwsMaxAttempts' --query 'Parameter.Value' --output text)
+      - export SAM_CLI_POLL_DELAY=$(aws ssm get-parameter --name 'SamCliPollDelay' --query 'Parameter.Value' --output text)
+      - echo AWS_RETRY_MODE=$AWS_RETRY_MODE
+      - echo AWS_MAX_ATTEMPTS=$AWS_MAX_ATTEMPTS
+      - echo SAM_CLI_POLL_DELAY=$SAM_CLI_POLL_DELAY
+      - sam build -t resources.yml --parallel --parameter-overrides
+
+      - for value in .aws-sam/build/*; do
+          if [ -f "$value"/package.json ]; then
+            cd "$value" || exit 1;
+            removeNPMAbsolutePaths . || exit 1;
+            echo Linting "$value" files;
+            cp ../../../.eslintignore . || exit 1
+            cp ../../../.eslintrc.json . || exit 1
+            npm run lint || exit 1;
+            rm .eslintignore;
+            rm .eslintrc.json;
+            npm prune --production || exit 1;
+            cd ../../.. || exit 1;
+          fi;
+        done
+
+      - sam deploy --stack-name $stack_name --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM --s3-bucket $S3_BUCKET_NAME --parameter-overrides Environment=$ENVIRONMENT AllowedCorsOrigins=$ALLOWED_CORS_ORIGINS
+
+      # - awsRegion=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='region'].OutputValue" --output text)
+      # - restApiId=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='apiGatewayId'].OutputValue" --output text)
+      # - apiStageName=$(aws cloudformation describe-stacks --stack-name $stack_name --query "Stacks[0].Outputs[?OutputKey=='apiStageName'].OutputValue" --output text)
+      # - aws apigateway create-deployment --rest-api-id $restApiId --region $awsRegion --stage-name $apiStageName
