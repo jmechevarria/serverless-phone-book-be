@@ -24,7 +24,7 @@ phases:
       - echo AWS_RETRY_MODE=$AWS_RETRY_MODE
       - echo AWS_MAX_ATTEMPTS=$AWS_MAX_ATTEMPTS
       - echo SAM_CLI_POLL_DELAY=$SAM_CLI_POLL_DELAY
-      - sam build -t resources.yml --parallel --parameter-overrides
+      - sam build -t resources.yml --parallel
 
       - for value in .aws-sam/build/*; do
           if [ -f "$value"/package.json ]; then
