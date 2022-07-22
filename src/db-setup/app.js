@@ -11,14 +11,15 @@ const getCredentials = async () => (await secretManagerClient.send(
 const db = require('./db');
 
 exports.lambdaHandler = async (event) => {
+  const credentials = JSON.parse(await getCredentials());
+
+  await db.createClient(credentials);
+
   try {
-    const credentials = await getCredentials();
-    db.createPool(JSON.parse(credentials));
-
-    await db.query(event.sql);
-  } catch (error) {
-    console.error('Running SQL command', error);
-
-    throw error;
+    const res = await db.query(event.query, event.params);
+    console.log('res', res);
+  } catch (err) {
+    console.error(err);
+    throw err;
   }
 };

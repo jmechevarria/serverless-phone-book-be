@@ -20,6 +20,10 @@ Parameters:
     Description: Aurora Postgres RDS cluster name
     Type: String
     Default: rds-cluster
+  DBInstanceName:
+    Description: Aurora Postgres RDS instance name
+    Type: String
+    Default: rds-cluster-instance
   DatabaseName:
     Description: Aurora Postgres RDS database name
     Type: String
@@ -28,6 +32,10 @@ Parameters:
     Description: The admin user name.
     Type: String
     Default: admin_user
+  SecurityGroupIds:
+    Type: String
+  SubnetIds:
+    Type: String
 
 Globals:
   Function:
@@ -620,6 +628,9 @@ Resources:
       FunctionName: DBSetup
       CodeUri: src/db-setup
       AutoPublishAlias: DBSetupAlias
+      VpcConfig:
+        SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
+        SubnetIds: !Split [',', !Ref SubnetIds]
       Environment:
         Variables:
           DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
@@ -658,6 +669,19 @@ Resources:
         MaxCapacity: 2
         MinCapacity: 2
         SecondsUntilAutoPause: 900 # 15 min
+
+  # RDSClusterInstance:
+  #   Type: AWS::RDS::DBInstance
+  #   Properties:
+  #     DBClusterIdentifier: !Ref RDSCluster
+  #     DBInstanceClass: db.t3.micro
+  #     DBInstanceIdentifier: !Ref DBInstanceName
+  #     Engine: aurora-postgresql
+  #     # PubliclyAccessible: Boolean
+  #     # SourceDBInstanceIdentifier: String
+  #     Tags: 
+  #       - Key: app
+  #         Value: phone-book-be
 
   DBCredentialsSecret:
     Type: AWS::SecretsManager::Secret
