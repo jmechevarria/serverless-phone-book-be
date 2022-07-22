@@ -95,7 +95,7 @@ Resources:
     Properties:
       Description: !Sub "Phone Book backend ${Environment} API Gateway Deployment"
       RestApiId: !Ref PhoneBookBEApiGateway
-      StageName: !Sub ${Environment}-PhoneBookBE
+      StageName: !Sub ${Environment}-phone-book-be
       StageDescription:
         Description: !Sub "Stage ${Environment}-PhoneBookBE"
         CachingEnabled: false
@@ -147,8 +147,8 @@ Resources:
         RequestTemplates:
           application/json: |
             {
-              "email": "$input.params('email')",
-              "password": "$input.params('password')",
+              "email": "$input.path('email')",
+              "password": "$input.path('password')",
             }
         PassthroughBehavior: WHEN_NO_TEMPLATES
         IntegrationResponses:
@@ -604,6 +604,9 @@ Resources:
       FunctionName: Login
       CodeUri: src/login
       AutoPublishAlias: LoginLambdaAlias
+      VpcConfig:
+        SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
+        SubnetIds: !Split [',', !Ref SubnetIds]
       Environment:
         Variables:
           DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
@@ -612,15 +615,26 @@ Resources:
           DB_ENDPOINT_ADDRESS: !GetAtt RDSCluster.Endpoint.Address
           DB_ENDPOINT_PORT: !GetAtt RDSCluster.Endpoint.Port
       Policies:
-        - AWSSecretsManagerGetSecretValuePolicy:
-            SecretArn: !Ref DBCredentialsSecret
-        - AWSSecretsManagerGetSecretValuePolicy:
-            SecretArn: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:JWT_SECRET-DGg8Ol'
+        - Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+              - secretsmanager:ListSecretVersionIds
+            Resource: '*'
+            # SecretArn: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
         - Statement:
           - Effect: Allow
             Action: 'rds-data:ExecuteStatement'
             Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
-  
+        - Statement:
+          - Effect: Allow
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
+
   DBSetup:
     Type: AWS::Serverless::Function
     Properties:
