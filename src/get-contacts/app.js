@@ -21,8 +21,9 @@ exports.lambdaHandler = async (event) => {
   try {
     // find contacts
     const contacts = (
-      await db.query('SELECT * FROM "contact" WHERE user_id=$1', [event.userId])
-    )?.rows;
+      await db.query('SELECT * FROM "contact" WHERE user_id=$1 ORDER BY name DESC', [event.userId])
+    )?.rows
+      ?.map((contact) => ({ ...contact, address_lines: contact.address_lines?.split('|||') }));
 
     console.log(`Found ${contacts.length} contacts for user id ${event.userId}`);
 

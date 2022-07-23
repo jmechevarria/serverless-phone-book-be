@@ -571,6 +571,7 @@ Resources:
             {
               "name": "$input.path('name')",
               "phone": "$input.path('phone')",
+              "addressLines": $input.path('addressLines'),
               "userId": "$context.authorizer.sub"
             }
         PassthroughBehavior: WHEN_NO_TEMPLATES
@@ -677,37 +678,37 @@ Resources:
             method.response.header.Access-Control-Allow-Origin:
               type: string
 
-  # CreateContactOptionsMethod:
-  #   Type: AWS::ApiGateway::Method
-  #   Properties:
-  #     AuthorizationType: NONE
-  #     RestApiId: !Ref PhoneBookBEApiGateway
-  #     ResourceId: !Ref ContactsResource
-  #     HttpMethod: OPTIONS
-  #     Integration:
-  #       RequestTemplates:
-  #         application/json: '{"statusCode": 200}'
-  #       IntegrationResponses:
-  #       - StatusCode: '200'
-  #         ResponseParameters:
-  #           method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
-  #           method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
-  #           method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
-  #         ResponseTemplates:
-  #           application/json: ''
-  #       Type: MOCK
-  #       PassthroughBehavior: WHEN_NO_TEMPLATES
-  #     MethodResponses:
-  #     - StatusCode: '200'
-  #       ResponseModels:
-  #         application/json: 'Empty'
-  #       ResponseParameters:
-  #           method.response.header.Access-Control-Allow-Headers:
-  #             type: string
-  #           method.response.header.Access-Control-Allow-Methods:
-  #             type: string
-  #           method.response.header.Access-Control-Allow-Origin:
-  #             type: string
+  ContactsOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ResourceId: !Ref ContactsResource
+      HttpMethod: OPTIONS
+      Integration:
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+            method.response.header.Access-Control-Allow-Methods: "'GET,POST,OPTIONS'"
+            method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+          ResponseTemplates:
+            application/json: ''
+        Type: MOCK
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+      MethodResponses:
+      - StatusCode: '200'
+        ResponseModels:
+          application/json: 'Empty'
+        ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
 
 #  ███╗   ███╗ ██████╗ ██████╗ ███████╗██╗     ███████╗
 #  ████╗ ████║██╔═══██╗██╔══██╗██╔════╝██║     ██╔════╝
@@ -786,6 +787,10 @@ Resources:
           phone:
             type: string
             pattern: ^\+?\d{1,15}$
+          addressLines:
+            type: array
+            items:
+              type: string
 
 #   ██████╗  █████╗ ████████╗███████╗██╗    ██╗ █████╗ ██╗   ██╗    ██████╗ ███████╗███████╗██████╗  ██████╗ ███╗   ██╗███████╗███████╗███████╗
 #  ██╔════╝ ██╔══██╗╚══██╔══╝██╔════╝██║    ██║██╔══██╗╚██╗ ██╔╝    ██╔══██╗██╔════╝██╔════╝██╔══██╗██╔═══██╗████╗  ██║██╔════╝██╔════╝██╔════╝

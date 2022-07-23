@@ -22,10 +22,10 @@ exports.lambdaHandler = async (event) => {
     // create contact
     const contact = (
       await db.query(
-        'INSERT INTO "contact" (name, phone, user_id) VALUES ($1, $2, $3) RETURNING *;',
-        [event.name, event.phone, event.userId],
+        'INSERT INTO "contact" (name, phone, user_id, address_lines) VALUES ($1, $2, $3, $4) RETURNING *;',
+        [event.name, event.phone, event.userId, event.addressLines?.join('|||')],
       )
-    )?.rows?.[0];
+    )?.rows?.map((c) => ({ ...c, address_lines: c.address_lines?.split('|||') }))?.[0];
 
     if (contact?.id) {
       console.log(`Created contact with id ${contact.id}`);
