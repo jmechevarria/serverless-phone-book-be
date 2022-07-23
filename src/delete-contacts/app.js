@@ -20,11 +20,11 @@ exports.lambdaHandler = async (event) => {
   }
 
   try {
-    // find contacts
+    // delete contacts
     const [singleContactQuery, params] = event.id ? [' AND id=$2 ', [event.userId, event.id]] : [' ', [event.userId]];
     const contacts = (
       await db.query(
-        `SELECT * FROM contact WHERE user_id=$1${singleContactQuery}ORDER BY name;`,
+        `DELETE FROM contact WHERE user_id=$1${singleContactQuery}RETURNING *;`,
         params,
       )
     )?.rows
@@ -32,11 +32,11 @@ exports.lambdaHandler = async (event) => {
 
     if (!contacts?.length && event.id) throw new CustomError('404:Not Found');
 
-    console.log(`Found ${contacts.length} contact(s) for user id ${event.userId}`);
+    console.log(`Deleted ${contacts.length} contact(s) for user id ${event.userId}`);
 
     return { contacts };
   } catch (error) {
-    console.error(`Getting contact(s) for user id ${event.userId}`, error);
+    console.error(`Deleting contact(s) for user id ${event.userId}`, error);
 
     if (error instanceof CustomError) throw error;
 

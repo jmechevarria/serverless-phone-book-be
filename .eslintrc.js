@@ -21,5 +21,6 @@ module.exports = {
     'no-return-await': 0,
     'consistent-return': 0,
     'max-classes-per-file': 0,
+    'no-plusplus': 0,
   },
 };

@@ -37,6 +37,6 @@ exports.lambdaHandler = async (event) => {
   } catch (error) {
     console.error('Creating contact', error);
 
-    throw new Error('500:Unexpected error: contact not created');
+    throw new Error('500');
   }
 };
