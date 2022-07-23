@@ -288,6 +288,17 @@ Resources:
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
               method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
               method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+          - StatusCode: '409'
+            SelectionPattern: '^409.*'
+            ResponseTemplates:
+              application/json: |
+                {
+                  "result" : { "message": "$input.path('$').errorMessage" }
+                }
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
           - StatusCode: '500'
             SelectionPattern: '500.*'
             ResponseTemplates:
@@ -301,6 +312,14 @@ Resources:
               method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
       MethodResponses:
         - StatusCode: '202'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+        - StatusCode: '409'
           ResponseParameters:
             method.response.header.Access-Control-Allow-Headers:
               type: string

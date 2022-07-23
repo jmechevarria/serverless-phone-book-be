@@ -25,13 +25,7 @@ exports.lambdaHandler = async (event, context) => {
 
   // if yes, return error
   if (result) {
-    const myErrorObj = {
-      errorType: 'BadRequest',
-      httpStatus: 409,
-      requestId: context.awsRequestId,
-      message: 'Conflict - User already registered',
-    };
-    throw new Error(JSON.stringify(myErrorObj));
+    throw new Error('409-Email already registered');
   }
 
   try {
