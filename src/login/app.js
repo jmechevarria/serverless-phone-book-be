@@ -3,11 +3,22 @@ const bcrypt = require('bcrypt');
 const db = require('./db');
 const manager = require('./manager');
 
-exports.lambdaHandler = async (event) => {
-  try {
-    const credentials = JSON.parse(await manager.getSecret(process.env.DB_CREDENTIALS_ARN));
-    await db.createClient(credentials);
+const secretsPromise = manager.getSecret(process.env.DB_CREDENTIALS_ARN);
+let credentials;
 
+exports.lambdaHandler = async (event) => {
+  if (!credentials) {
+    try {
+      credentials = JSON.parse(await secretsPromise);
+      db.setCredentials(credentials);
+    } catch (error) {
+      console.error('Getting credentials', error);
+
+      throw new Error('500');
+    }
+  }
+
+  try {
     // find user in db
     const result = (await db.query('SELECT * FROM "user" WHERE email=$1', [event.email])).rows?.[0];
     const userId = result?.id;
@@ -25,11 +36,11 @@ exports.lambdaHandler = async (event) => {
       expiresIn: 600,
     });
 
-    return {
-      token, userId,
-    };
+    console.log(`Logged in user with id ${userId}`);
+
+    return { token, userId };
   } catch (error) {
-    console.error('Parsing basic auth token', error);
+    console.error('Logging user in', error);
 
     throw error;
   }

@@ -1,6 +1,6 @@
 const { Client } = require('pg');
 
-let client;
+let credentials;
 
 /**
  * Takes a PostgreSQL query string as argument, and returns the results of the query.
@@ -9,35 +9,40 @@ let client;
  * @returns {Promise<QueryFunction>}
  */
 exports.query = async (querystring, params) => {
+  const client = await connectClient();
+
   if (!client) throw new Error('No connection');
 
   try {
-    const res = await client.query(querystring, params);
-
-    return res;
+    return await client.query(querystring, params);
   } catch (error) {
     console.error('While running command', error);
 
     throw error;
   } finally {
-    await endClient();
+    await endClient(client);
   }
 };
 
-exports.createClient = async (credentials) => {
-  const dbConfig = {
+const connectClient = async () => {
+  const client = new Client({
     host: process.env.DB_ENDPOINT_ADDRESS,
     user: credentials.username,
     password: credentials.password,
     port: process.env.DB_ENDPOINT_PORT,
     database: process.env.DB_NAME,
-  };
+  });
 
-  client = new Client(dbConfig);
   await client.connect();
+
+  return client;
 };
 
-async function endClient() {
+exports.setCredentials = (creds) => {
+  credentials = creds;
+};
+
+async function endClient(client) {
   await client.end();
   console.log('client ended');
 }

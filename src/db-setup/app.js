@@ -1,19 +1,20 @@
-const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
-
-const secretManagerClient = new SecretsManagerClient({
-  region: process.env.AWS_REGION,
-});
-
-const getCredentials = async () => (await secretManagerClient.send(
-  new GetSecretValueCommand({ SecretId: process.env.DB_CREDENTIALS_ARN }),
-)).SecretString;
-
 const db = require('./db');
+const manager = require('./manager');
+
+const secretsPromise = manager.getSecret(process.env.DB_CREDENTIALS_ARN);
+let credentials;
 
 exports.lambdaHandler = async (event) => {
-  const credentials = JSON.parse(await getCredentials());
+  if (!credentials) {
+    try {
+      credentials = JSON.parse(await secretsPromise);
+      db.setCredentials(credentials);
+    } catch (error) {
+      console.error('Getting credentials', error);
 
-  await db.createClient(credentials);
+      throw new Error('500');
+    }
+  }
 
   try {
     const res = await db.query(event.query, event.params);

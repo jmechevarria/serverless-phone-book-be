@@ -47,6 +47,11 @@ Globals:
       Variables:
         ENVIRONMENT: !Ref Environment
         AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+        DB_NAME: !Ref DatabaseName
+        DB_CREDENTIALS_ARN: !Ref DBCredentialsSecret
+        DB_ENDPOINT_ADDRESS: !GetAtt RDSCluster.Endpoint.Address
+        DB_ENDPOINT_PORT: !GetAtt RDSCluster.Endpoint.Port
+        # DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
     Tags:
       app: phone-book-be
 
@@ -135,10 +140,9 @@ Resources:
       OperationName: Login
       HttpMethod: POST
       AuthorizationType: NONE
-      # AuthorizerId: !Ref PhoneBookBEApiAuthorizer
-      RequestParameters:
-        method.request.header.Authorization: true
       RequestValidatorId: !Ref RequestBodyValidator
+      RequestModels:
+        application/json: !Ref LoginModel
       Integration:
         Type: AWS
         Credentials: !GetAtt PhoneBookBEApiGatewayRole.Arn
@@ -160,7 +164,18 @@ Resources:
                 }
             ResponseParameters:
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
-              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+          - StatusCode: '401'
+            SelectionPattern: '401.*'
+            ResponseTemplates:
+              application/json: |
+                {
+                  "result": { "message": "$input.path('$').errorMessage" }
+                }
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
               method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
           - StatusCode: '500'
             SelectionPattern: '500.*'
@@ -171,10 +186,18 @@ Resources:
                 }
             ResponseParameters:
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
-              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
               method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
       MethodResponses:
         - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+        - StatusCode: '401'
           ResponseParameters:
             method.response.header.Access-Control-Allow-Headers:
               type: string
@@ -191,6 +214,141 @@ Resources:
             method.response.header.Access-Control-Allow-Origin:
               type: string
 
+  LoginOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ResourceId: !Ref LoginResource
+      HttpMethod: OPTIONS
+      Integration:
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+            method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+            method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+          ResponseTemplates:
+            application/json: ''
+        Type: MOCK
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+      MethodResponses:
+      - StatusCode: '200'
+        ResponseModels:
+          application/json: 'Empty'
+        ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+
+  SignupResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt PhoneBookBEApiGateway.RootResourceId
+      PathPart: signup
+      RestApiId: !Ref PhoneBookBEApiGateway
+
+  SignupMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ResourceId: !Ref SignupResource
+      OperationName: Signup
+      HttpMethod: POST
+      AuthorizationType: NONE
+      RequestValidatorId: !Ref RequestBodyValidator
+      RequestModels:
+        application/json: !Ref SignupModel
+      Integration:
+        Type: AWS
+        Credentials: !GetAtt PhoneBookBEApiGatewayRole.Arn
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SignupLambda.Arn}:SignupLambdaAlias/invocations"
+        RequestTemplates:
+          application/json: |
+            {
+              "email": "$input.path('email')",
+              "password": "$input.path('password')",
+              "name": "$input.path('name')"
+            }
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        IntegrationResponses:
+          - StatusCode: '202'
+            ResponseTemplates:
+              application/json: |
+                {
+                  "result": $input.json('$')
+                }
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+          - StatusCode: '500'
+            SelectionPattern: '500.*'
+            ResponseTemplates:
+              application/json: |
+                {
+                  "result" : { "message": "Internal Server Error" }
+                }
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+      MethodResponses:
+        - StatusCode: '202'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+        - StatusCode: '500'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+
+  SignupOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ResourceId: !Ref SignupResource
+      HttpMethod: OPTIONS
+      Integration:
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+            method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+            method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+          ResponseTemplates:
+            application/json: ''
+        Type: MOCK
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+      MethodResponses:
+      - StatusCode: '200'
+        ResponseModels:
+          application/json: 'Empty'
+        ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+
 #  ███╗   ███╗ ██████╗ ██████╗ ███████╗██╗     ███████╗
 #  ████╗ ████║██╔═══██╗██╔══██╗██╔════╝██║     ██╔════╝
 #  ██╔████╔██║██║   ██║██║  ██║█████╗  ██║     ███████╗
@@ -199,6 +357,54 @@ Resources:
 #  ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝
 #
 
+  LoginModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ContentType: application/json
+      Description: Login model
+      Name: LoginModel
+      Schema:
+        "$schema": "http://json-schema.org/draft-04/schema#"
+        title: LoginModel
+        type: object
+        required:
+          - email
+          - password
+        properties:
+          email:
+            type: string
+            format: email
+          password:
+            type: string
+            minLength: 8
+            maxLength: 24
+
+  SignupModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ContentType: application/json
+      Description: Signup model
+      Name: SignupModel
+      Schema:
+        "$schema": "http://json-schema.org/draft-04/schema#"
+        title: SignupModel
+        type: object
+        required:
+          - email
+          - password
+          - name
+        properties:
+          email:
+            type: string
+            format: email
+          password:
+            type: string
+            minLength: 8
+            maxLength: 24
+          name:
+            type: string
 
 #   ██████╗  █████╗ ████████╗███████╗██╗    ██╗ █████╗ ██╗   ██╗    ██████╗ ███████╗███████╗██████╗  ██████╗ ███╗   ██╗███████╗███████╗███████╗
 #  ██╔════╝ ██╔══██╗╚══██╔══╝██╔════╝██║    ██║██╔══██╗╚██╗ ██╔╝    ██╔══██╗██╔════╝██╔════╝██╔══██╗██╔═══██╗████╗  ██║██╔════╝██╔════╝██╔════╝
@@ -601,20 +807,13 @@ Resources:
   LoginLambda:
     Type: AWS::Serverless::Function
     Properties:
-      Timeout: 5
+      Timeout: 10
       FunctionName: Login
       CodeUri: src/login
       AutoPublishAlias: LoginLambdaAlias
       VpcConfig:
         SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
         SubnetIds: !Split [',', !Ref SubnetIds]
-      Environment:
-        Variables:
-          DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
-          DB_NAME: !Ref DatabaseName
-          DB_CREDENTIALS_ARN: !Ref DBCredentialsSecret
-          DB_ENDPOINT_ADDRESS: !GetAtt RDSCluster.Endpoint.Address
-          DB_ENDPOINT_PORT: !GetAtt RDSCluster.Endpoint.Port
       Policies:
         - Statement:
           - Effect: Allow
@@ -636,23 +835,48 @@ Resources:
               - ec2:DeleteNetworkInterface
             Resource: "*"
 
+  SignupLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 10
+      FunctionName: Signup
+      CodeUri: src/sign-up
+      AutoPublishAlias: SignupLambdaAlias
+      VpcConfig:
+        SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
+        SubnetIds: !Split [',', !Ref SubnetIds]
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+              - secretsmanager:ListSecretVersionIds
+            # Resource: '*'
+            Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+            # SecretArn: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+        - Statement:
+          - Effect: Allow
+            Action: 'rds-data:ExecuteStatement'
+            Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
+        - Statement:
+          - Effect: Allow
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
+
   DBSetup:
     Type: AWS::Serverless::Function
     Properties:
-      Timeout: 5
+      Timeout: 10
       FunctionName: DBSetup
       CodeUri: src/db-setup
       AutoPublishAlias: DBSetupAlias
       VpcConfig:
         SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
         SubnetIds: !Split [',', !Ref SubnetIds]
-      Environment:
-        Variables:
-          DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
-          DB_NAME: !Ref DatabaseName
-          DB_CREDENTIALS_ARN: !Ref DBCredentialsSecret
-          DB_ENDPOINT_ADDRESS: !GetAtt RDSCluster.Endpoint.Address
-          DB_ENDPOINT_PORT: !GetAtt RDSCluster.Endpoint.Port
       Policies:
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: !Ref DBCredentialsSecret
@@ -678,25 +902,11 @@ Resources:
       Engine: aurora-postgresql
       EngineMode: serverless
       EngineVersion: '10.18'
-      # EnableHttpEndpoint: true # for HTTP API endpoint
       ScalingConfiguration:
         AutoPause: true
         MaxCapacity: 2
         MinCapacity: 2
         SecondsUntilAutoPause: 900 # 15 min
-
-  # RDSClusterInstance:
-  #   Type: AWS::RDS::DBInstance
-  #   Properties:
-  #     DBClusterIdentifier: !Ref RDSCluster
-  #     DBInstanceClass: db.t3.micro
-  #     DBInstanceIdentifier: !Ref DBInstanceName
-  #     Engine: aurora-postgresql
-  #     # PubliclyAccessible: Boolean
-  #     # SourceDBInstanceIdentifier: String
-  #     Tags: 
-  #       - Key: app
-  #         Value: phone-book-be
 
   DBCredentialsSecret:
     Type: AWS::SecretsManager::Secret
@@ -711,69 +921,6 @@ Resources:
       Tags:
         - Key: app
           Value: phone-book-be
-
-
-#  ██████╗ ██╗   ██╗███╗   ██╗ █████╗ ███╗   ███╗ ██████╗ ██████╗ ██████╗
-#  ██╔══██╗╚██╗ ██╔╝████╗  ██║██╔══██╗████╗ ████║██╔═══██╗██╔══██╗██╔══██╗
-#  ██║  ██║ ╚████╔╝ ██╔██╗ ██║███████║██╔████╔██║██║   ██║██║  ██║██████╔╝
-#  ██║  ██║  ╚██╔╝  ██║╚██╗██║██╔══██║██║╚██╔╝██║██║   ██║██║  ██║██╔══██╗
-#  ██████╔╝   ██║   ██║ ╚████║██║  ██║██║ ╚═╝ ██║╚██████╔╝██████╔╝██████╔╝
-#  ╚═════╝    ╚═╝   ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═════╝
-#
-
-  # SubscriptionCacheTable:
-  #   Type: AWS::DynamoDB::Table
-  #   DeletionPolicy: Retain
-  #   Properties:
-  #     AttributeDefinitions:
-  #       - AttributeName: mpid
-  #         AttributeType: S
-  #       - AttributeName: email
-  #         AttributeType: S
-  #       - AttributeName: phone
-  #         AttributeType: S
-  #     KeySchema:
-  #       - AttributeName: mpid
-  #         KeyType: HASH
-  #     ProvisionedThroughput:
-  #       ReadCapacityUnits: 5
-  #       WriteCapacityUnits: 5
-  #     TimeToLiveSpecification:
-  #       AttributeName: ttl
-  #       Enabled: true
-  #     GlobalSecondaryIndexes:
-  #       - IndexName:
-  #           !Ref emailIndexName
-  #         KeySchema:
-  #           - AttributeName: email
-  #             KeyType: HASH
-  #         Projection:
-  #           NonKeyAttributes:
-  #             - phone
-  #             - email_subscribe
-  #             - push_subscribe
-  #             - last_updated
-  #             - ttl
-  #           ProjectionType: INCLUDE
-  #         ProvisionedThroughput:
-  #           ReadCapacityUnits: 5
-  #           WriteCapacityUnits: 5
-  #       - IndexName:
-  #           !Ref phoneIndexName
-  #         KeySchema:
-  #           - AttributeName: phone
-  #             KeyType: HASH
-  #         Projection:
-  #           NonKeyAttributes:
-  #             - email
-  #             - email_subscribe
-  #             - push_subscribe
-  #             - last_updated
-  #             - ttl
-  #           ProjectionType: INCLUDE
-  #         ProvisionedThroughput:
-  #           ReadCapacityUnits: 5
-  #           WriteCapacityUnits: 5
 
 Outputs:
   apiStageName:

@@ -6,6 +6,7 @@ const { SecretsManagerClient } = require('@aws-sdk/client-secrets-manager');
 sinon.stub(SecretsManagerClient.prototype, 'send').resolves({
   SecretString: JSON.stringify({ username: 'db_username', password: 'db_password' }),
 });
+
 const app = require('../../app');
 
 describe('Tests app.js', () => {
@@ -33,7 +34,7 @@ describe('Tests app.js', () => {
   });
 
   it('OK', async () => {
-    const result = await app.lambdaHandler({ query: 'select 1', params: [] });
+    const result = await app.lambdaHandler({ username: 'username', password: '123', name: 'name' });
     console.warn(result);
   });
 });

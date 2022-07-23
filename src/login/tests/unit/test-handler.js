@@ -2,12 +2,15 @@ const sinon = require('sinon');
 const { expect } = require('chai');
 const { Client } = require('pg');
 const { SecretsManagerClient } = require('@aws-sdk/client-secrets-manager');
+const bcrypt = require('bcrypt');
+
+sinon.stub(SecretsManagerClient.prototype, 'send').resolves({
+  SecretString: JSON.stringify({ username: 'db_username', password: 'db_password' }),
+});
 
 const app = require('../../app');
 
 describe('Tests app.js', () => {
-  // let sendStub;
-  let secretsManagerStub;
   let threw;
   let connectStub;
   let queryStub;
@@ -15,14 +18,16 @@ describe('Tests app.js', () => {
   before(() => {
     sinon.stub(console, 'log');
     sinon.stub(console, 'error');
-    // sendStub = sinon.stub(DynamoDBDocumentClient.prototype, 'send');
-    secretsManagerStub = sinon.stub(SecretsManagerClient.prototype, 'send').resolves({ SecretString: 'dummy' });
-    connectStub = sinon.stub(Client.prototype, 'connect').resolves({});
-    queryStub = sinon.stub(Client.prototype, 'query').resolves({ rows: [{ id: 1, password: '123' }] });
+    connectStub = sinon.stub(Client.prototype, 'connect');
+    queryStub = sinon.stub(Client.prototype, 'query').resolves({
+      rows: [{
+        id: 1,
+        password: bcrypt.hashSync('123', bcrypt.genSaltSync()),
+      }],
+    });
   });
 
   beforeEach(() => {
-    // sendStub.resolves({ Item: undefined });
     threw = false;
   });
 
