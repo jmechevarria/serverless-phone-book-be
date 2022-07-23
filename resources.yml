@@ -710,6 +710,109 @@ Resources:
             method.response.header.Access-Control-Allow-Origin:
               type: string
 
+  ContactIDResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !Ref ContactsResource
+      PathPart: '{id}'
+      RestApiId: !Ref PhoneBookBEApiGateway
+
+  GetContactMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ResourceId: !Ref ContactIDResource
+      OperationName: GetContact
+      HttpMethod: GET
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref PhoneBookBEApiAuthorizer
+      RequestValidatorId: !Ref RequestParametersValidator
+      RequestParameters:
+        method.request.header.Authorization: true
+      Integration:
+        Type: AWS
+        Credentials: !GetAtt PhoneBookBEApiGatewayRole.Arn
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetContactsLambda.Arn}:GetContactsLambdaAlias/invocations"
+        RequestTemplates:
+          application/json: |
+            {
+              "id": "$input.params('id')",
+              "userId": "$context.authorizer.sub"
+            }
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseTemplates:
+              application/json: |
+                {
+                  "result": $input.json('$')
+                }
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+          - StatusCode: '500'
+            SelectionPattern: '500.*'
+            ResponseTemplates:
+              application/json: |
+                {
+                  "result" : { "message": "Internal Server Error" }
+                }
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+        - StatusCode: '500'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+
+  ContactIDOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ResourceId: !Ref ContactIDResource
+      HttpMethod: OPTIONS
+      Integration:
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+            method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+            method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+          ResponseTemplates:
+            application/json: ''
+        Type: MOCK
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+      MethodResponses:
+      - StatusCode: '200'
+        ResponseModels:
+          application/json: 'Empty'
+        ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+
 #  ███╗   ███╗ ██████╗ ██████╗ ███████╗██╗     ███████╗
 #  ████╗ ████║██╔═══██╗██╔══██╗██╔════╝██║     ██╔════╝
 #  ██╔████╔██║██║   ██║██║  ██║█████╗  ██║     ███████╗

@@ -20,8 +20,12 @@ exports.lambdaHandler = async (event) => {
 
   try {
     // find contacts
+    const [singleContactQuery, params] = event.id ? [' AND id=$2 ', [event.userId, event.id]] : [' ', [event.userId]];
     const contacts = (
-      await db.query('SELECT * FROM "contact" WHERE user_id=$1 ORDER BY name DESC', [event.userId])
+      await db.query(
+        `SELECT * FROM contact WHERE user_id=$1${singleContactQuery}ORDER BY name`,
+        params,
+      )
     )?.rows
       ?.map((contact) => ({ ...contact, address_lines: contact.address_lines?.split('|||') }));
 
@@ -29,7 +33,7 @@ exports.lambdaHandler = async (event) => {
 
     return { contacts };
   } catch (error) {
-    console.error('Signing user up', error);
+    console.error(`Getting contact(s) for user id ${event.userId}`, error);
 
     throw new Error('500');
   }
