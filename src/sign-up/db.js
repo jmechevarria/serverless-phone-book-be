@@ -16,7 +16,7 @@ exports.query = async (querystring, params) => {
   try {
     return await client.query(querystring, params);
   } catch (error) {
-    console.error('While running command', error);
+    console.error(`While running query ${querystring}`, error);
 
     throw error;
   } finally {

@@ -1,13 +1,31 @@
+const jwt = require('jsonwebtoken');
+const manager = require('./manager');
+
+const secretsPromise = manager.getSecret('JWT_SECRET');
+let jwtSecret;
+
 exports.lambdaHandler = async (event) => {
+  if (!jwtSecret) {
+    try {
+      jwtSecret = await secretsPromise;
+    } catch (error) {
+      console.error('Getting credentials', error);
+
+      throw new Error('500');
+    }
+  }
+
   const policyStatements = [];
   let policyStatement = null;
   let authData = null;
 
   try {
-    if (event.authorizationToken.startsWith('Basic')) {
+    const authHeader = event.authorizationToken;
+
+    if (authHeader.startsWith('Basic ')) {
       // in case we use Basic schema in the future
-    } else if (event.authorizationToken.startsWith('Bearer')) {
-      authData = await verifyBearerToken(event.authorizationToken);
+    } else if (authHeader.startsWith('Bearer ')) {
+      authData = jwt.verify(authHeader.split(' ')[1], jwtSecret);
     } else {
       throw new Error('No token or invalid token found');
     }
@@ -15,7 +33,7 @@ exports.lambdaHandler = async (event) => {
     policyStatement = generatePolicyStatement('*', 'Allow');
     policyStatements.push(policyStatement);
 
-    return generatePolicy('user', policyStatements, authData.id);
+    return generatePolicy(policyStatements, authData);
   } catch (err) {
     console.error(err);
 
@@ -23,7 +41,7 @@ exports.lambdaHandler = async (event) => {
     policyStatement = generatePolicyStatement('*', 'Deny');
     policyStatements.push(policyStatement);
 
-    return generatePolicy('user', policyStatements);
+    return generatePolicy(policyStatements);
   }
 };
 
@@ -35,23 +53,18 @@ function generatePolicyStatement(resource, effect) {
   };
 }
 
-function generatePolicy(principalId, policyStatements, userId) {
+function generatePolicy(policyStatements, authData) {
   // Generate a fully formed IAM policy
   const policyDocument = {
     Version: '2012-10-17',
     Statement: policyStatements,
   };
   const context = {
-    userId,
+    ...authData,
   };
   return {
-    principalId,
+    principalId: 'user',
     policyDocument,
     context,
   };
-}
-
-function verifyBearerToken(accessToken) {
-  // TODO
-  return { id: 0 };
 }

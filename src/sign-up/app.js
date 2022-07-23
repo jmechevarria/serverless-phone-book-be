@@ -6,7 +6,7 @@ const manager = require('./manager');
 const secretsPromise = manager.getSecret(process.env.DB_CREDENTIALS_ARN);
 let credentials;
 
-exports.lambdaHandler = async (event, context) => {
+exports.lambdaHandler = async (event) => {
   if (!credentials) {
     try {
       credentials = JSON.parse(await secretsPromise);
@@ -37,23 +37,27 @@ exports.lambdaHandler = async (event, context) => {
       )
     )?.rows?.[0]?.id;
 
-    console.log(`Created user with id ${userId}`);
+    if (userId) {
+      console.log(`Created user with id ${userId}`);
 
-    // get JWT secret
-    const jwtSecret = await manager.getSecret('JWT_SECRET');
+      // get JWT secret
+      const jwtSecret = await manager.getSecret('JWT_SECRET');
 
-    // generate Bearer token
-    const token = jwt.sign({
-      sub: userId,
-      email: event.email,
-    }, jwtSecret, {
-      expiresIn: 600,
-    });
+      // generate Bearer token
+      const token = jwt.sign({
+        sub: userId,
+        email: event.email,
+      }, jwtSecret, {
+        expiresIn: 600,
+      });
 
-    return { token, userId };
+      return { token, userId };
+    }
+
+    throw new Error('500:Unexpected error: user not created');
   } catch (error) {
     console.error('Signing user up', error);
 
-    throw new Error('500');
+    throw error;
   }
 };

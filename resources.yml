@@ -57,6 +57,148 @@ Globals:
 
 Resources:
 
+#  ██╗      █████╗ ███╗   ███╗██████╗ ██████╗  █████╗
+#  ██║     ██╔══██╗████╗ ████║██╔══██╗██╔══██╗██╔══██╗
+#  ██║     ███████║██╔████╔██║██████╔╝██║  ██║███████║
+#  ██║     ██╔══██║██║╚██╔╝██║██╔══██╗██║  ██║██╔══██║
+#  ███████╗██║  ██║██║ ╚═╝ ██║██████╔╝██████╔╝██║  ██║
+#  ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═════╝ ╚═════╝ ╚═╝  ╚═╝
+#
+
+  LambdaAuthorizer:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 10
+      FunctionName: PhoneBookBELambdaAuthorizer
+      CodeUri: src/lambda-authorizer
+      AutoPublishAlias: LambdaAuthorizerAlias
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+              - secretsmanager:ListSecretVersionIds
+            Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+
+  LoginLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 10
+      FunctionName: Login
+      CodeUri: src/login
+      AutoPublishAlias: LoginLambdaAlias
+      VpcConfig:
+        SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
+        SubnetIds: !Split [',', !Ref SubnetIds]
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+              - secretsmanager:ListSecretVersionIds
+            Resource: '*'
+            # SecretArn: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+        - Statement:
+          - Effect: Allow
+            Action: 'rds-data:ExecuteStatement'
+            Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
+        - Statement:
+          - Effect: Allow
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
+
+  SignupLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 10
+      FunctionName: Signup
+      CodeUri: src/sign-up
+      AutoPublishAlias: SignupLambdaAlias
+      VpcConfig:
+        SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
+        SubnetIds: !Split [',', !Ref SubnetIds]
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+              - secretsmanager:ListSecretVersionIds
+            # Resource: '*'
+            Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+            # SecretArn: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+        - Statement:
+          - Effect: Allow
+            Action: 'rds-data:ExecuteStatement'
+            Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
+        - Statement:
+          - Effect: Allow
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
+
+  DBSetup:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 10
+      FunctionName: DBSetup
+      CodeUri: src/db-setup
+      AutoPublishAlias: DBSetupAlias
+      VpcConfig:
+        SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
+        SubnetIds: !Split [',', !Ref SubnetIds]
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DBCredentialsSecret
+        - Statement:
+          - Effect: Allow
+            Action: 'rds-data:ExecuteStatement'
+            Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
+        - Statement:
+          - Effect: Allow
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
+
+  CreateContactLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 10
+      FunctionName: CreateContact
+      CodeUri: src/create-contact
+      AutoPublishAlias: CreateContactLambdaAlias
+      VpcConfig:
+        SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
+        SubnetIds: !Split [',', !Ref SubnetIds]
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+              - secretsmanager:ListSecretVersionIds
+            Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+        - Statement:
+          - Effect: Allow
+            Action: 'rds-data:ExecuteStatement'
+            Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
+        - Statement:
+          - Effect: Allow
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
+
 #   █████╗ ██████╗ ██╗     ██████╗  █████╗ ████████╗███████╗██╗    ██╗ █████╗ ██╗   ██╗
 #  ██╔══██╗██╔══██╗██║    ██╔════╝ ██╔══██╗╚══██╔══╝██╔════╝██║    ██║██╔══██╗╚██╗ ██╔╝
 #  ███████║██████╔╝██║    ██║  ███╗███████║   ██║   █████╗  ██║ █╗ ██║███████║ ╚████╔╝
@@ -368,6 +510,112 @@ Resources:
             method.response.header.Access-Control-Allow-Origin:
               type: string
 
+  ContactsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt PhoneBookBEApiGateway.RootResourceId
+      PathPart: contacts
+      RestApiId: !Ref PhoneBookBEApiGateway
+
+  CreateContactMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ResourceId: !Ref ContactsResource
+      OperationName: CreateContact
+      HttpMethod: POST
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref PhoneBookBEApiAuthorizer
+      RequestValidatorId: !Ref RequestBodyValidator
+      RequestParameters:
+        method.request.header.Authorization: true
+      RequestModels:
+        application/json: !Ref CreateContactModel
+      Integration:
+        Type: AWS
+        Credentials: !GetAtt PhoneBookBEApiGatewayRole.Arn
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateContactLambda.Arn}:CreateContactLambdaAlias/invocations"
+        RequestTemplates:
+          application/json: |
+            {
+              "name": "$input.path('name')",
+              "phone": "$input.path('phone')",
+              "userId": "$context.authorizer.sub"
+            }
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        IntegrationResponses:
+          - StatusCode: '202'
+            ResponseTemplates:
+              application/json: |
+                {
+                  "result": $input.json('$')
+                }
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+          - StatusCode: '500'
+            SelectionPattern: '500.*'
+            ResponseTemplates:
+              application/json: |
+                {
+                  "result" : { "message": "Internal Server Error" }
+                }
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+      MethodResponses:
+        - StatusCode: '202'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+        - StatusCode: '500'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+
+  CreateContactOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ResourceId: !Ref ContactsResource
+      HttpMethod: OPTIONS
+      Integration:
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+            method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+            method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+          ResponseTemplates:
+            application/json: ''
+        Type: MOCK
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+      MethodResponses:
+      - StatusCode: '200'
+        ResponseModels:
+          application/json: 'Empty'
+        ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+
 #  ███╗   ███╗ ██████╗ ██████╗ ███████╗██╗     ███████╗
 #  ████╗ ████║██╔═══██╗██╔══██╗██╔════╝██║     ██╔════╝
 #  ██╔████╔██║██║   ██║██║  ██║█████╗  ██║     ███████╗
@@ -424,6 +672,27 @@ Resources:
             maxLength: 24
           name:
             type: string
+
+  CreateContactModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ContentType: application/json
+      Description: Create contact model
+      Name: CreateContactModel
+      Schema:
+        "$schema": "http://json-schema.org/draft-04/schema#"
+        title: CreateContactModel
+        type: object
+        required:
+          - name
+          - phone
+        properties:
+          name:
+            type: string
+          phone:
+            type: string
+            pattern: ^\+?\d{1,15}$
 
 #   ██████╗  █████╗ ████████╗███████╗██╗    ██╗ █████╗ ██╗   ██╗    ██████╗ ███████╗███████╗██████╗  ██████╗ ███╗   ██╗███████╗███████╗███████╗
 #  ██╔════╝ ██╔══██╗╚══██╔══╝██╔════╝██║    ██║██╔══██╗╚██╗ ██╔╝    ██╔══██╗██╔════╝██╔════╝██╔══██╗██╔═══██╗████╗  ██║██╔════╝██╔════╝██╔════╝
@@ -513,7 +782,7 @@ Resources:
       ResponseTemplates:
         application/json: |
           {
-            "result": { "message":$context.error.messageString }
+            "result": { "message":$context.error.validationErrorString }
           }
       ResponseType: BAD_REQUEST_BODY
       RestApiId: !Ref PhoneBookBEApiGateway
@@ -782,134 +1051,6 @@ Resources:
       Tags:
         - Key: app
           Value: phone-book-be
-
-  # LoginInvocationRole:
-  #   Type: AWS::IAM::Role
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Version: "2012-10-17"
-  #       Statement:
-  #         - Sid: ApiGatewayServiceLambdaInvocationRole
-  #           Effect: Allow
-  #           Action:
-  #             - sts:AssumeRole
-  #           Principal:
-  #             Service:
-  #               - apigateway.amazonaws.com
-  #     Policies:
-  #       - PolicyName: SubscriptionStatusPolicy
-  #         PolicyDocument:
-  #           Version: "2012-10-17"
-  #           Statement:
-  #             - Effect: Allow
-  #               Action:
-  #                 - lambda:InvokeFunction
-  #               Resource:
-  #                 - !Ref subscriptionStatus.Alias
-
-#  ██╗      █████╗ ███╗   ███╗██████╗ ██████╗  █████╗
-#  ██║     ██╔══██╗████╗ ████║██╔══██╗██╔══██╗██╔══██╗
-#  ██║     ███████║██╔████╔██║██████╔╝██║  ██║███████║
-#  ██║     ██╔══██║██║╚██╔╝██║██╔══██╗██║  ██║██╔══██║
-#  ███████╗██║  ██║██║ ╚═╝ ██║██████╔╝██████╔╝██║  ██║
-#  ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═════╝ ╚═════╝ ╚═╝  ╚═╝
-#
-
-  LambdaAuthorizer:
-    Type: AWS::Serverless::Function
-    Properties:
-      Timeout: 10
-      FunctionName: PhoneBookBELambdaAuthorizer
-      CodeUri: src/lambda-authorizer
-      AutoPublishAlias: LambdaAuthorizerAlias
-
-  LoginLambda:
-    Type: AWS::Serverless::Function
-    Properties:
-      Timeout: 10
-      FunctionName: Login
-      CodeUri: src/login
-      AutoPublishAlias: LoginLambdaAlias
-      VpcConfig:
-        SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
-        SubnetIds: !Split [',', !Ref SubnetIds]
-      Policies:
-        - Statement:
-          - Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-              - secretsmanager:DescribeSecret
-              - secretsmanager:ListSecretVersionIds
-            Resource: '*'
-            # SecretArn: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
-        - Statement:
-          - Effect: Allow
-            Action: 'rds-data:ExecuteStatement'
-            Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
-        - Statement:
-          - Effect: Allow
-            Action:
-              - ec2:CreateNetworkInterface
-              - ec2:DescribeNetworkInterfaces
-              - ec2:DeleteNetworkInterface
-            Resource: "*"
-
-  SignupLambda:
-    Type: AWS::Serverless::Function
-    Properties:
-      Timeout: 10
-      FunctionName: Signup
-      CodeUri: src/sign-up
-      AutoPublishAlias: SignupLambdaAlias
-      VpcConfig:
-        SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
-        SubnetIds: !Split [',', !Ref SubnetIds]
-      Policies:
-        - Statement:
-          - Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-              - secretsmanager:DescribeSecret
-              - secretsmanager:ListSecretVersionIds
-            # Resource: '*'
-            Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
-            # SecretArn: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
-        - Statement:
-          - Effect: Allow
-            Action: 'rds-data:ExecuteStatement'
-            Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
-        - Statement:
-          - Effect: Allow
-            Action:
-              - ec2:CreateNetworkInterface
-              - ec2:DescribeNetworkInterfaces
-              - ec2:DeleteNetworkInterface
-            Resource: "*"
-
-  DBSetup:
-    Type: AWS::Serverless::Function
-    Properties:
-      Timeout: 10
-      FunctionName: DBSetup
-      CodeUri: src/db-setup
-      AutoPublishAlias: DBSetupAlias
-      VpcConfig:
-        SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
-        SubnetIds: !Split [',', !Ref SubnetIds]
-      Policies:
-        - AWSSecretsManagerGetSecretValuePolicy:
-            SecretArn: !Ref DBCredentialsSecret
-        - Statement:
-          - Effect: Allow
-            Action: 'rds-data:ExecuteStatement'
-            Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
-        - Statement:
-          - Effect: Allow
-            Action:
-              - ec2:CreateNetworkInterface
-              - ec2:DescribeNetworkInterfaces
-              - ec2:DeleteNetworkInterface
-            Resource: "*"
 
   RDSCluster:
     Type: AWS::RDS::DBCluster
