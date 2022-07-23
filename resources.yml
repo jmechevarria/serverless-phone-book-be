@@ -148,7 +148,7 @@ Resources:
           application/json: |
             {
               "email": "$input.path('email')",
-              "password": "$input.path('password')",
+              "password": "$input.path('password')"
             }
         PassthroughBehavior: WHEN_NO_TEMPLATES
         IntegrationResponses:
@@ -400,10 +400,11 @@ Resources:
       ResponseTemplates:
         application/json: |
           {
-            "result": { "message":$context.error.messageString }
+            "result": { "message": "Method Not Allowed" }
           }
       ResponseType: MISSING_AUTHENTICATION_TOKEN
       RestApiId: !Ref PhoneBookBEApiGateway
+      StatusCode: '405'
   GatewayResponseQuotaExceeded:
     Type: AWS::ApiGateway::GatewayResponse
     Properties:
