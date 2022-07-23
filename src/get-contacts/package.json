@@ -1,0 +1,23 @@
+{
+  "name": "login",
+  "version": "1.0.0",
+  "description": "Logs users in",
+  "main": "app.js",
+  "scripts": {
+    "lint": "eslint . --config ../../.eslintrc.js",
+    "lint:fix": "eslint . --fix --config ../../.eslintrc.js",
+    "test": "mocha tests/unit/"
+  },
+  "author": "JMED <jmechevarria2015@gmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "chai": "^4.3.6",
+    "eslint": "^8.20.0",
+    "mocha": "^10.0.0",
+    "sinon": "^14.0.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.131.0",
+    "pg": "^8.7.3"
+  }
+}
