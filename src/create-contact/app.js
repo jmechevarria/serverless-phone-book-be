@@ -5,8 +5,6 @@ const secretsPromise = manager.getSecret(process.env.DB_CREDENTIALS_ARN);
 let credentials;
 
 exports.lambdaHandler = async (event) => {
-  console.log(`Event = ${JSON.stringify(event)}`);
-
   if (!credentials) {
     try {
       credentials = JSON.parse(await secretsPromise);
@@ -22,7 +20,7 @@ exports.lambdaHandler = async (event) => {
     // create contact
     const contact = (
       await db.query(
-        'INSERT INTO "contact" (name, phone, user_id, address_lines) VALUES ($1, $2, $3, $4) RETURNING *;',
+        'INSERT INTO contact (name, phone, user_id, address_lines) VALUES ($1, $2, $3, $4) RETURNING *;',
         [event.name, event.phone, event.userId, event.addressLines?.join('|||')],
       )
     )?.rows?.map((c) => ({ ...c, address_lines: c.address_lines?.split('|||') }))?.[0];
