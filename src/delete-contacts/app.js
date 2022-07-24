@@ -33,8 +33,6 @@ exports.lambdaHandler = async (event) => {
     if (!contacts?.length && event.id) throw new CustomError('404:Not Found');
 
     console.log(`Deleted ${contacts.length} contact(s) for user id ${event.userId}`);
-
-    return { contacts };
   } catch (error) {
     console.error(`Deleting contact(s) for user id ${event.userId}`, error);
 

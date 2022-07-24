@@ -770,7 +770,7 @@ Resources:
             }
         PassthroughBehavior: WHEN_NO_TEMPLATES
         IntegrationResponses:
-          - StatusCode: '200'
+          - StatusCode: '204'
             ResponseTemplates:
               application/json: |
                 {
@@ -792,7 +792,7 @@ Resources:
               method.response.header.Access-Control-Allow-Methods: "'DELETE,OPTIONS'"
               method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
       MethodResponses:
-        - StatusCode: '200'
+        - StatusCode: '204'
           ResponseParameters:
             method.response.header.Access-Control-Allow-Headers:
               type: string
@@ -868,7 +868,7 @@ Resources:
         RequestTemplates:
           application/json: |
             {
-              "id": "$input.params('id')",
+              "id": "$util.escapeJavaScript($input.params('id'))",
               "userId": "$context.authorizer.sub"
             }
         PassthroughBehavior: WHEN_NO_TEMPLATES
@@ -954,7 +954,7 @@ Resources:
         RequestTemplates:
           application/json: |
             {
-              "id": "$input.params('id')",
+              "id": "$util.escapeJavaScript($input.params('id'))",
               "userId": "$context.authorizer.sub",
               "name": "$input.path('name')",
               "phone": "$input.path('phone')",
@@ -1040,7 +1040,7 @@ Resources:
         RequestTemplates:
           application/json: |
             {
-              "id": "$input.params('id')",
+              "id": "$util.escapeJavaScript($input.params('id'))",
               "userId": "$context.authorizer.sub"
             }
         PassthroughBehavior: WHEN_NO_TEMPLATES
@@ -1211,7 +1211,7 @@ Resources:
             type: string
           phone:
             type: string
-            pattern: ^\+?\d{1,15}$
+            pattern: ^\+?\d{4,15}$
           addressLines:
             type: array
             items:
@@ -1233,7 +1233,7 @@ Resources:
             type: string
           phone:
             type: string
-            pattern: ^\+?\d{1,15}$
+            pattern: ^\+?\d{4,15}$
           addressLines:
             type: array
             items:
