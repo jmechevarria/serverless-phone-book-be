@@ -229,6 +229,36 @@ Resources:
               - ec2:DeleteNetworkInterface
             Resource: "*"
 
+  UpdateContactLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 10
+      FunctionName: UpdateContact
+      CodeUri: src/update-contact
+      AutoPublishAlias: UpdateContactLambdaAlias
+      VpcConfig:
+        SecurityGroupIds: !Split [',', !Ref SecurityGroupIds]
+        SubnetIds: !Split [',', !Ref SubnetIds]
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+              - secretsmanager:ListSecretVersionIds
+            Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+        - Statement:
+          - Effect: Allow
+            Action: 'rds-data:ExecuteStatement'
+            Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBClusterName}'
+        - Statement:
+          - Effect: Allow
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
+
   DeleteContactsLambda:
     Type: AWS::Serverless::Function
     Properties:
@@ -326,6 +356,14 @@ Resources:
       RestApiId: !Ref PhoneBookBEApiGateway
       ValidateRequestBody: true
       ValidateRequestParameters: false
+
+  FullRequestValidator:
+    Type: AWS::ApiGateway::RequestValidator
+    Properties:
+      Name: FullRequestValidator
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ValidateRequestBody: true
+      ValidateRequestParameters: true
 
   LoginResource:
     Type: AWS::ApiGateway::Resource
@@ -893,6 +931,95 @@ Resources:
             method.response.header.Access-Control-Allow-Origin:
               type: string
 
+  UpdateContactMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ResourceId: !Ref ContactIDResource
+      OperationName: UpdateContact
+      HttpMethod: PATCH
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref PhoneBookBEApiAuthorizer
+      RequestValidatorId: !Ref FullRequestValidator
+      RequestModels:
+        application/json: !Ref UpdateContactModel
+      RequestParameters:
+        method.request.header.Authorization: true
+        method.request.path.id: true
+      Integration:
+        Type: AWS
+        Credentials: !GetAtt PhoneBookBEApiGatewayRole.Arn
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateContactLambda.Arn}:UpdateContactLambdaAlias/invocations"
+        RequestTemplates:
+          application/json: |
+            {
+              "id": "$input.params('id')",
+              "userId": "$context.authorizer.sub",
+              "name": "$input.path('name')",
+              "phone": "$input.path('phone')",
+              "addressLines": $input.path('addressLines')
+            }
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseTemplates:
+              application/json: |
+                {
+                  "result": $input.json('$')
+                }
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+              method.response.header.Access-Control-Allow-Methods: "'PATCH,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+          - StatusCode: '404'
+            SelectionPattern: '404.*'
+            ResponseTemplates:
+              application/json: |
+                {
+                  "result" : { "message": "Not Found" }
+                }
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+              method.response.header.Access-Control-Allow-Methods: "'PATCH,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+          - StatusCode: '500'
+            SelectionPattern: '500.*'
+            ResponseTemplates:
+              application/json: |
+                {
+                  "result" : { "message": "Internal Server Error" }
+                }
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
+              method.response.header.Access-Control-Allow-Methods: "'PATCH,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+        - StatusCode: '404'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+        - StatusCode: '500'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers:
+              type: string
+            method.response.header.Access-Control-Allow-Methods:
+              type: string
+            method.response.header.Access-Control-Allow-Origin:
+              type: string
+
   DeleteContactMethod:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -990,7 +1117,7 @@ Resources:
         - StatusCode: '200'
           ResponseParameters:
             method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With,Channel'"
-            method.response.header.Access-Control-Allow-Methods: "'GET,DELETE,OPTIONS'"
+            method.response.header.Access-Control-Allow-Methods: "'GET,DELETE,PATCH,OPTIONS'"
             method.response.header.Access-Control-Allow-Origin: !Sub "'${AllowedCorsOrigins}'"
           ResponseTemplates:
             application/json: ''
@@ -1079,6 +1206,28 @@ Resources:
         required:
           - name
           - phone
+        properties:
+          name:
+            type: string
+          phone:
+            type: string
+            pattern: ^\+?\d{1,15}$
+          addressLines:
+            type: array
+            items:
+              type: string
+
+  UpdateContactModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      RestApiId: !Ref PhoneBookBEApiGateway
+      ContentType: application/json
+      Description: Update contact model
+      Name: UpdateContactModel
+      Schema:
+        "$schema": "http://json-schema.org/draft-04/schema#"
+        title: UpdateContactModel
+        type: object
         properties:
           name:
             type: string
