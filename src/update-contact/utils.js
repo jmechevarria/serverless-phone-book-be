@@ -15,9 +15,10 @@ exports.buildQuery = (columns) => {
     setValues.push(`phone = $${index++}`);
     params.push(phone);
   }
+
   if (addressLines) {
     setValues.push(`address_lines = $${index++}`);
-    params.push(addressLines?.join('|||'));
+    params.push(addressLines.join('|||'));
   }
 
   params.push(userId, id);

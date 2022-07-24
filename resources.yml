@@ -636,11 +636,22 @@ Resources:
         Uri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateContactLambda.Arn}:CreateContactLambdaAlias/invocations"
         RequestTemplates:
           application/json: |
+            #set($addressLines = $input.path('addressLines'))
+            #set($noLines = $addressLines == "")
+            #set($addressLinesCount = $addressLines.size())
+            #set($dq = '"')
+
+            #if($noLines)
+                #set($addressLines = "$dq$dq")
+            #elseif ($addressLinesCount == 0)
+                #set($addressLines = [])
+            #end
+
             {
-              "name": "$input.path('name')",
-              "phone": "$input.path('phone')",
-              "addressLines": $input.path('addressLines'),
-              "userId": "$context.authorizer.sub"
+                "userId": "$context.authorizer.sub",
+                "name": "$input.path('name')",
+                "phone": "$input.path('phone')",
+                "addressLines": $addressLines
             }
         PassthroughBehavior: WHEN_NO_TEMPLATES
         IntegrationResponses:
@@ -955,12 +966,23 @@ Resources:
         Uri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateContactLambda.Arn}:UpdateContactLambdaAlias/invocations"
         RequestTemplates:
           application/json: |
+            #set($addressLines = $input.path('addressLines'))
+            #set($noLines = $addressLines == "")
+            #set($addressLinesCount = $addressLines.size())
+            #set($dq = '"')
+
+            #if($noLines)
+                #set($addressLines = "$dq$dq")
+            #elseif ($addressLinesCount == 0)
+                #set($addressLines = [])
+            #end
+
             {
-              "id": "$util.escapeJavaScript($input.params('id'))",
-              "userId": "$context.authorizer.sub",
-              "name": "$input.path('name')",
-              "phone": "$input.path('phone')",
-              "addressLines": $input.path('addressLines')
+                "id": "$input.params('id')",
+                "userId": "$context.authorizer.sub",
+                "name": "$input.path('name')",
+                "phone": "$input.path('phone')",
+                "addressLines": $addressLines
             }
         PassthroughBehavior: WHEN_NO_TEMPLATES
         IntegrationResponses:
