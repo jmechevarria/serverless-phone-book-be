@@ -6,8 +6,6 @@ const secretsPromise = manager.getSecret(process.env.DB_CREDENTIALS_ARN);
 let credentials;
 
 exports.lambdaHandler = async (event) => {
-  console.log(`Event = ${JSON.stringify(event)}`);
-
   if (!credentials) {
     try {
       credentials = JSON.parse(await secretsPromise);
