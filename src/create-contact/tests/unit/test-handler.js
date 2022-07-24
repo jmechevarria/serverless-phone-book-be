@@ -21,9 +21,9 @@ describe('Tests app.js', () => {
 
   beforeEach(() => {
     // eslint-disable-next-line no-underscore-dangle
-    app.__set__('secretsPromise', new Promise((res) => {
-      res(JSON.stringify({ username: 'db_username', password: 'db_password' }));
-    }));
+    app.__set__('secretsPromise', Promise.resolve(
+      JSON.stringify({ username: 'db_username', password: 'db_password' }),
+    ));
 
     queryStub.resolves(dbResponses.ok);
     threw = false;
@@ -39,9 +39,7 @@ describe('Tests app.js', () => {
 
   it('Throws 500 if there is a problem fetching secrets', async () => {
     // eslint-disable-next-line no-underscore-dangle
-    app.__set__('secretsPromise', new Promise((res, rej) => {
-      rej();
-    }));
+    app.__set__('secretsPromise', Promise.reject());
 
     try {
       await app.lambdaHandler({ name: 'name', phone: 'phone', addressLines: [] });
