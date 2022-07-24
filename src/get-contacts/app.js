@@ -24,7 +24,11 @@ exports.lambdaHandler = async (event) => {
     const [singleContactQuery, params] = event.id ? [' AND id=$2 ', [event.userId, event.id]] : [' ', [event.userId]];
     const contacts = (
       await db.query(
-        `SELECT * FROM contact WHERE user_id=$1${singleContactQuery}ORDER BY name;`,
+        `SELECT * FROM contact WHERE user_id=$1${singleContactQuery}ORDER BY name LIMIT ${
+          event.limit || 'ALL'
+        } OFFSET ${
+          event.offset || 0
+        };`,
         params,
       )
     )?.rows

@@ -703,7 +703,9 @@ Resources:
         RequestTemplates:
           application/json: |
             {
-              "userId": "$context.authorizer.sub"
+              "userId": "$context.authorizer.sub",
+              "limit": "$util.escapeJavaScript($input.params('limit'))",
+              "offset": "$util.escapeJavaScript($input.params('offset'))"
             }
         PassthroughBehavior: WHEN_NO_TEMPLATES
         IntegrationResponses:
