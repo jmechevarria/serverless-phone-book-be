@@ -38,7 +38,12 @@ exports.lambdaHandler = async (event) => {
 
     console.log(`Logged in user with id ${userId}`);
 
-    return { token, userId };
+    return {
+      token,
+      user: {
+        name: result.name,
+      },
+    };
   } catch (error) {
     console.error('Logging user in', error);
 

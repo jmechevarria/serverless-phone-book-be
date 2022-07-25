@@ -715,8 +715,8 @@ Resources:
           application/json: |
             {
               "userId": "$context.authorizer.sub",
-              "limit": "$util.escapeJavaScript($input.params('limit'))",
-              "offset": "$util.escapeJavaScript($input.params('offset'))"
+              "limit": "$input.params('limit')",
+              "offset": "$input.params('offset')"
             }
         PassthroughBehavior: WHEN_NO_TEMPLATES
         IntegrationResponses:
@@ -881,7 +881,7 @@ Resources:
         RequestTemplates:
           application/json: |
             {
-              "id": "$util.escapeJavaScript($input.params('id'))",
+              "id": "$input.params('id')",
               "userId": "$context.authorizer.sub"
             }
         PassthroughBehavior: WHEN_NO_TEMPLATES
@@ -1064,7 +1064,7 @@ Resources:
         RequestTemplates:
           application/json: |
             {
-              "id": "$util.escapeJavaScript($input.params('id'))",
+              "id": "$input.params('id')",
               "userId": "$context.authorizer.sub"
             }
         PassthroughBehavior: WHEN_NO_TEMPLATES

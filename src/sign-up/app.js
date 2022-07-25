@@ -19,23 +19,25 @@ exports.lambdaHandler = async (event) => {
   }
 
   // check if email is already registered
-  const result = (
+  const existingEmail = (
     await db.query('SELECT * FROM "user" WHERE email=$1', [event.email])
   )?.rows?.[0];
 
   // if yes, return error
-  if (result) {
+  if (existingEmail) {
     throw new Error('409-Email already registered');
   }
 
   try {
     // insert new user with hashed password
-    const userId = (
+    const user = (
       await db.query(
         'INSERT INTO "user" (email, password, name) VALUES ($1, $2, $3) RETURNING id',
         [event.email, bcrypt.hashSync(event.password, bcrypt.genSaltSync()), event.name],
       )
-    )?.rows?.[0]?.id;
+    )?.rows?.[0];
+
+    const userId = user?.id;
 
     if (userId) {
       console.log(`Created user with id ${userId}`);
@@ -51,7 +53,12 @@ exports.lambdaHandler = async (event) => {
         expiresIn: 600,
       });
 
-      return { token, userId };
+      return {
+        token,
+        user: {
+          name: user.name,
+        },
+      };
     }
 
     throw new Error('500:Unexpected error: user not created');
