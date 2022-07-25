@@ -50,7 +50,7 @@ exports.lambdaHandler = async (event) => {
         sub: userId,
         email: event.email,
       }, jwtSecret, {
-        expiresIn: 600,
+        expiresIn: 1200,
       });
 
       return {

@@ -33,7 +33,7 @@ exports.lambdaHandler = async (event) => {
       sub: userId,
       email: event.email,
     }, jwtSecret, {
-      expiresIn: 600,
+      expiresIn: 1200,
     });
 
     console.log(`Logged in user with id ${userId}`);
