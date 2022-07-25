@@ -32,7 +32,7 @@ exports.lambdaHandler = async (event) => {
     // insert new user with hashed password
     const user = (
       await db.query(
-        'INSERT INTO "user" (email, password, name) VALUES ($1, $2, $3) RETURNING id',
+        'INSERT INTO "user" (email, password, name) VALUES ($1, $2, $3) RETURNING *',
         [event.email, bcrypt.hashSync(event.password, bcrypt.genSaltSync()), event.name],
       )
     )?.rows?.[0];
